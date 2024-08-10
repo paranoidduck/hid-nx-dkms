@@ -1086,26 +1086,44 @@ static int nx_con_request_calibration(struct nx_con *con)
 
 	if ((ret = nx_con_read_stick_calibration(con,
 						 left_stick_addr,
-					     	 &con->left_stick_cal_x,
-					     	 &con->left_stick_cal_y,
-					     	 true))) {
-		nx_con_use_default_calibration(con->hdev,
-					       &con->left_stick_cal_x,
-					       &con->left_stick_cal_y,
-					       "left",
-					       ret);
+						 &con->left_stick_cal_x,
+						 &con->left_stick_cal_y,
+						 true))) {
+		if (NX_CON_CAL_USR_LEFT_DATA_ADDR == left_stick_addr) {
+			hid_info(con->hdev, "fallback to factory cal for left stick\n");
+			ret = nx_con_read_stick_calibration(con,
+							    NX_CON_CAL_FCT_DATA_LEFT_ADDR,
+							    &con->left_stick_cal_x,
+							    &con->left_stick_cal_y,
+							    true);
+		}
+		if (ret)
+			nx_con_use_default_calibration(con->hdev,
+						       &con->left_stick_cal_x,
+						       &con->left_stick_cal_y,
+						       "left",
+						       ret);
 	}
 
 	if ((ret = nx_con_read_stick_calibration(con,
 						 right_stick_addr,
 						 &con->right_stick_cal_x,
-					         &con->right_stick_cal_y,
-					         false))) {
-		nx_con_use_default_calibration(con->hdev,
-					       &con->right_stick_cal_x,
-					       &con->right_stick_cal_y,
-					       "right",
-					       ret);
+						 &con->right_stick_cal_y,
+						 false))) {
+		if (NX_CON_CAL_USR_RIGHT_DATA_ADDR == right_stick_addr) {
+			hid_info(con->hdev, "fallback to factory cal for right stick\n");
+			nx_con_read_stick_calibration(con,
+						 NX_CON_CAL_FCT_DATA_RIGHT_ADDR,
+						 &con->right_stick_cal_x,
+						 &con->right_stick_cal_y,
+						 false);
+		}
+		if (ret)
+			nx_con_use_default_calibration(con->hdev,
+						       &con->right_stick_cal_x,
+						       &con->right_stick_cal_y,
+						       "right",
+						       ret);
 	}
 
 	hid_dbg(con->hdev, "calibration:\n"
