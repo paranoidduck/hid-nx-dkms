@@ -476,10 +476,10 @@ static const struct nx_con_button_mapping n64con_button_mappings[] = {
 	{ BTN_TR,		NX_CON_BTN_R,		},
 	{ BTN_TR2,		NX_CON_BTN_LSTICK,	},
 	{ BTN_START,		NX_CON_BTN_PLUS,	},
-	{ BTN_DPAD_UP,		NX_CON_BTN_Y,		},
-	{ BTN_DPAD_DOWN,	NX_CON_BTN_ZR,		},
-	{ BTN_DPAD_LEFT,	NX_CON_BTN_X,		},
-	{ BTN_DPAD_RIGHT,	NX_CON_BTN_MINUS,	},
+	{ BTN_DPAD_UP,		NX_CON_BTN_UP,		},
+	{ BTN_DPAD_DOWN,	NX_CON_BTN_DOWN,	},
+	{ BTN_DPAD_LEFT,	NX_CON_BTN_LEFT,	},
+	{ BTN_DPAD_RIGHT,	NX_CON_BTN_RIGHT,	},
 	{ BTN_0,		NX_CON_BTN_HOME,	},
 	{ BTN_1,		NX_CON_BTN_CAP,		},
 	{ /* sentinel */ },
@@ -1614,6 +1614,27 @@ static void nx_con_report_right_stick(struct nx_con *con,
 	input_report_abs(con->idev, ABS_RY, y);
 }
 
+static void nx_con_report_n64con_cbutton(struct nx_con *con,
+					 struct nx_con_input_report *rep)
+{
+	int x = 0;
+	int y = 0;
+	u32 btns = hid_field_extract(con->hdev, rep->button_status, 0, 24);
+
+	if (btns & NX_CON_BTN_X)
+		x = -1;
+	else if (btns & NX_CON_BTN_MINUS)
+		x = 1;
+
+	if (btns & NX_CON_BTN_Y)
+		y = -1;
+	else if (btns & NX_CON_BTN_ZR)
+		y = 1;
+
+	input_report_abs(con->idev, ABS_RX, x);
+	input_report_abs(con->idev, ABS_RY, y);
+}
+
 static void nx_con_report_dpad(struct nx_con *con,
 			       struct nx_con_input_report *rep)
 {
@@ -1684,7 +1705,7 @@ static void nx_con_parse_report(struct nx_con *con, struct nx_con_input_report *
 		nx_con_report_buttons(con, rep, gencon_button_mappings);
 	} else if (nx_con_type_is_n64con(con)) {
 		nx_con_report_left_stick(con, rep);
-		nx_con_report_dpad(con, rep);
+		nx_con_report_n64con_cbutton(con, rep);
 		nx_con_report_buttons(con, rep, n64con_button_mappings);
 	}
 
@@ -1928,6 +1949,22 @@ static void nx_con_config_right_stick(struct input_dev *idev)
 			     NX_CON_STICK_FLAT);
 }
 
+static void nx_con_config_n64con_cbutton(struct input_dev *idev)
+{
+	input_set_abs_params(idev,
+			     ABS_RX,
+			     -NX_CON_MAX_DPAD_MAG,
+			     NX_CON_MAX_DPAD_MAG,
+			     NX_CON_DPAD_FUZZ,
+			     NX_CON_DPAD_FLAT);
+	input_set_abs_params(idev,
+			     ABS_RY,
+			     -NX_CON_MAX_DPAD_MAG,
+			     NX_CON_MAX_DPAD_MAG,
+			     NX_CON_DPAD_FUZZ,
+			     NX_CON_DPAD_FLAT);
+}
+
 static void nx_con_config_dpad(struct input_dev *idev)
 {
 	input_set_abs_params(idev,
@@ -2096,8 +2133,8 @@ static int nx_con_idev_create(struct nx_con *con)
 		nx_con_config_dpad(con->idev);
 		nx_con_config_buttons(con->idev, gencon_button_mappings);
 	} else if (nx_con_type_is_n64con(con)) {
-		nx_con_config_dpad(con->idev);
 		nx_con_config_left_stick(con->idev);
+		nx_con_config_n64con_cbutton(con->idev);
 		nx_con_config_buttons(con->idev, n64con_button_mappings);
 	}
 
